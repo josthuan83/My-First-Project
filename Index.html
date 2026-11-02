@@ -1,1 +1,409 @@
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NextShop AI — Open-Source AI E-Commerce Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Roboto Condensed', sans-serif; }
+    .chat-scroll::-webkit-scrollbar { width: 6px; }
+    .chat-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
+  <!-- Header / Navbar -->
+  <header class="bg-white shadow-sm sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl font-bold text-indigo-600">⚡ NextShop AI</span>
+        <span class="hidden sm:inline-block text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
+          OpenAI Powered
+        </span>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="flex-1 max-w-md mx-4">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Tìm kiếm sản phẩm / Search products..."
+          oninput="renderProducts()"
+          class="w-full px-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-3">
+        <button
+          onclick="toggleModal('aiCopyModal')"
+          class="hidden md:flex items-center space-x-1 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition"
+        >
+          <span>✍️ AI Copywriter</span>
+        </button>
+
+        <button
+          onclick="toggleModal('apiKeyModal')"
+          class="text-sm bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition"
+          title="Configure OpenAI API Key"
+        >
+          ⚙️ API Key
+        </button>
+
+        <button
+          onclick="toggleCart()"
+          class="relative bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition flex items-center space-x-2"
+        >
+          <span>🛒 Giỏ hàng / Cart</span>
+          <span id="cartCount" class="bg-white text-indigo-600 px-2 py-0.5 rounded-full text-xs">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between">
+      <div class="max-w-2xl mb-6 md:mb-0">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-3">
+          Nền Tảng Thương Mại Điện Tử Thông Minh / <span class="italic font-normal">AI-Native E-Commerce</span>
+        </h1>
+        <p class="text-indigo-100 text-lg mb-6">
+          Trải nghiệm mua sắm thế hệ mới tích hợp trợ lý ảo OpenAI GPT-4o-mini giúp tư vấn sản phẩm 24/7 theo đúng nhu cầu và ngân sách của bạn.
+        </p>
+        <div class="flex space-x-3">
+          <button onclick="toggleAIChat(true)" class="bg-white text-indigo-700 font-bold px-5 py-2.5 rounded-lg shadow hover:bg-indigo-50 transition">
+            🤖 Hỏi Trợ Lý AI Ngay / Ask AI Assistant
+          </button>
+          <button onclick="toggleModal('aiCopyModal')" class="bg-indigo-800 bg-opacity-60 border border-indigo-400 text-white px-5 py-2.5 rounded-lg hover:bg-opacity-80 transition">
+            ✍️ Tạo Mô Tả SP Bằng AI / AI Copywriter
+          </button>
+        </div>
+      </div>
+      <div class="bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20 max-w-sm">
+        <p class="text-xs uppercase tracking-wider text-indigo-200 font-bold mb-2">Open-Source Architecture</p>
+        <p class="text-sm text-white leading-relaxed">
+          Dự án mã nguồn mở tích hợp trực tiếp <code>/v1/chat/completions</code> của OpenAI giúp gợi ý sản phẩm theo ngữ nghĩa (Semantic Matching) và tự động hóa nội dung bán hàng.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Category Filters & Product Grid -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex flex-wrap gap-2" id="categoryButtons">
+        <button onclick="setCategory('ALL')" class="cat-btn bg-indigo-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Tất cả / All</button>
+        <button onclick="setCategory('Electronics')" class="cat-btn bg-white text-slate-700 border px-4 py-1.5 rounded-full text-sm">Điện tử / Electronics</button>
+        <button onclick="setCategory('Home & Living')" class="cat-btn bg-white text-slate-700 border px-4 py-1.5 rounded-full text-sm">Gia dụng / Home & Living</button>
+        <button onclick="setCategory('Safety & Eco')" class="cat-btn bg-white text-slate-700 border px-4 py-1.5 rounded-full text-sm">An toàn & Xanh / Safety & Eco</button>
+      </div>
+      <span id="productCounter" class="text-sm text-slate-500"></span>
+    </div>
+
+    <!-- Products Container -->
+    <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <!-- Slide-over Shopping Cart -->
+  <div id="cartDrawer" class="fixed inset-0 bg-black/50 z-50 hidden flex justify-end">
+    <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h2 class="text-lg font-bold">🛒 Giỏ Hàng Của Bạn / Your Cart</h2>
+        <button onclick="toggleCart()" class="text-slate-500 hover:text-slate-800 text-xl">&times;</button>
+      </div>
+      <div id="cartItems" class="p-4 flex-1 overflow-y-auto space-y-4"></div>
+      <div class="p-4 border-t bg-slate-50">
+        <div class="flex justify-between text-lg font-bold mb-4">
+          <span>Tổng cộng / Total:</span>
+          <span id="cartTotal" class="text-indigo-600">$0.00</span>
+        </div>
+        <button onclick="checkout()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">
+          Thanh Toán Ngay / Checkout Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating AI Shopping Assistant Widget -->
+  <div class="fixed bottom-5 right-5 z-40">
+    <div id="aiChatWindow" class="hidden bg-white w-80 sm:w-96 h-[460px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col mb-3 overflow-hidden">
+      <div class="bg-indigo-600 text-white p-3.5 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-sm">🤖 OpenAI Shopping Assistant</h3>
+          <p class="text-xs text-indigo-200">Powered by GPT-4o-mini</p>
+        </div>
+        <button onclick="toggleAIChat(false)" class="text-white hover:text-indigo-200 text-lg">&times;</button>
+      </div>
+      <div id="chatMessages" class="p-3 flex-1 overflow-y-auto chat-scroll space-y-3 bg-slate-50 text-sm">
+        <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+          Xin chào! Tôi là trợ lý AI của cửa hàng. Bạn đang tìm sản phẩm gì hoặc ngân sách bao nhiêu? <br/>
+          <span class="italic text-xs text-slate-500">Hi! Tell me what you need or your budget, and I'll recommend the best items!</span>
+        </div>
+      </div>
+      <div class="p-2.5 border-t bg-white flex space-x-2">
+        <input
+          id="chatInput"
+          type="text"
+          placeholder="Nhập câu hỏi... / Ask AI..."
+          onkeypress="if(event.key === 'Enter') sendChatMessage()"
+          class="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button onclick="sendChatMessage()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">
+          Gửi
+        </button>
+      </div>
+    </div>
+
+    <button
+      onclick="toggleAIChat()"
+      class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-xl flex items-center space-x-2 ml-auto transition transform hover:scale-105"
+    >
+      <span>🤖 Tư vấn AI / AI Chat</span>
+    </button>
+  </div>
+
+  <!-- Modal: OpenAI API Key Config -->
+  <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+      <h3 class="text-lg font-bold mb-2">⚙️ Cấu hình OpenAI API Key</h3>
+      <p class="text-xs text-slate-500 mb-4">
+        Nhập khóa OpenAI API của bạn để kích hoạt mô hình <code>gpt-4o-mini</code> trực tiếp. Khóa chỉ lưu cục bộ trên trình duyệt của bạn (LocalStorage).
+      </p>
+      <input
+        id="apiKeyInput"
+        type="password"
+        placeholder="sk-proj-..."
+        class="w-full px-3 py-2 border rounded-lg text-sm mb-4"
+      />
+      <div class="flex justify-end space-x-2">
+        <button onclick="toggleModal('apiKeyModal')" class="px-4 py-2 text-sm bg-slate-100 rounded-lg">Đóng / Close</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-sm bg-indigo-600 text-white font-bold rounded-lg">Lưu / Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: AI Product Copywriter Studio -->
+  <div id="aiCopyModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-lg font-bold">✍️ AI Product Description Generator</h3>
+        <button onclick="toggleModal('aiCopyModal')" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+      </div>
+      <p class="text-xs text-slate-500 mb-4">
+        Công cụ dành cho người bán: Tự động tạo nội dung mô tả sản phẩm chuẩn SEO bằng OpenAI API.
+      </p>
+      <div class="space-y-3">
+        <input id="copyProductName" type="text" placeholder="Tên sản phẩm (VD: Bình giữ nhiệt thông minh EcoSmart)" class="w-full px-3 py-2 border rounded-lg text-sm" />
+        <input id="copyKeywords" type="text" placeholder="Đặc điểm chính (VD: Inox 316, hiển thị nhiệt độ LED, giữ nhiệt 24h)" class="w-full px-3 py-2 border rounded-lg text-sm" />
+        <button onclick="generateProductCopy()" id="btnGenerateCopy" class="w-full bg-emerald-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">
+          ✨ Tạo Mô Tả Bằng OpenAI / Generate Copy
+        </button>
+        <textarea id="copyResult" rows="5" readonly placeholder="Kết quả từ AI sẽ hiển thị tại đây..." class="w-full p-3 border rounded-lg text-sm bg-slate-50"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 text-sm py-6 mt-12">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center">
+      <p>© 2026 NextShop AI — Open-Source AI E-Commerce Starter Kit (Maintainer: josthuan83)</p>
+      <p class="italic text-xs mt-2 sm:mt-0">Built with OpenAI API Integration (GPT-4o-mini)</p>
+    </div>
+  </footer>
+
+  <!-- Application Logic & OpenAI API Service -->
+  <script>
+    const PRODUCTS = [
+      { id: 1, name: "Tai nghe chống ồn AI SoundPro X1 / Wireless ANC Headphones", category: "Electronics", price: 129.00, desc: "Chống ồn chủ động thông minh, pin 40 giờ, âm thanh Hi-Res chuẩn phòng thu.", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80" },
+      { id: 2, name: "Đồng hồ thông minh SmartFit Pro / AI Health Smartwatch", category: "Electronics", price: 199.00, desc: "Theo dõi nhịp tim, giấc ngủ 24/7, tích hợp trợ lý giọng nói và chống nước IP68.", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80" },
+      { id: 3, name: "Máy lọc không khí thông minh AirPure HEPA 13 / Smart Air Purifier", category: "Home & Living", price: 149.00, desc: "Cảm biến bụi mịn PM2.5 theo thời gian thực, lọc sạch 99.97% vi khuẩn và mùi hôi.", image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=600&q=80" },
+      { id: 4, name: "Bình giữ nhiệt hiển thị LED EcoBottle / Smart Thermal Flask", category: "Safety & Eco", price: 29.00, desc: "Thép không gỉ chuẩn y tế Inox 316, chạm nhẹ hiển thị nhiệt độ nước, thân thiện môi trường.", image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=600&q=80" },
+      { id: 5, name: "Đèn bàn chống cận cảm biến ánh sáng / Smart Eye-Care Desk Lamp", category: "Home & Living", price: 45.00, desc: "Tự động điều chỉnh độ sáng theo môi trường, bảo vệ mắt tối đa khi làm việc ban đêm.", image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=600&q=80" },
+      { id: 6, name: "Bộ sơ cứu & Đèn pin cứu hộ đa năng / SafeGuard Emergency Kit", category: "Safety & Eco", price: 59.00, desc: "Trang bị tiêu chuẩn an toàn cho gia đình và xe hơi, tích hợp đèn báo SOS và sạc năng lượng mặt trời.", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&w=600&q=80" }
+    ];
+
+    let selectedCategory = 'ALL';
+    let cart = JSON.parse(localStorage.getItem('nextshop_cart') || '[]');
+    let openAiKey = localStorage.getItem('openai_api_key') || '';
+
+    function renderProducts() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const grid = document.getElementById('productGrid');
+      const filtered = PRODUCTS.filter(p => {
+        const matchCat = selectedCategory === 'ALL' || p.category === selectedCategory;
+        const matchSearch = p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
+        return matchCat && matchSearch;
+      });
+
+      document.getElementById('productCounter').innerText = `Hiển thị ${filtered.length} sản phẩm`;
+      grid.innerHTML = filtered.map(p => `
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition">
+          <img src="${p.image}" alt="${p.name}" class="h-48 w-full object-cover" />
+          <div class="p-4 flex-1 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-bold text-indigo-600 uppercase">${p.category}</span>
+              <h3 class="font-bold text-base mt-1 mb-2">${p.name}</h3>
+              <p class="text-xs text-slate-600 mb-4">${p.desc}</p>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t">
+              <span class="text-lg font-bold text-slate-900">$${p.price.toFixed(2)}</span>
+              <button onclick="addToCart(${p.id})" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition">
+                + Thêm vào giỏ / Add
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setCategory(cat) {
+      selectedCategory = cat;
+      renderProducts();
+    }
+
+    function addToCart(id) {
+      const product = PRODUCTS.find(p => p.id === id);
+      const existing = cart.find(item => item.id === id);
+      if (existing) existing.qty += 1;
+      else cart.push({ ...product, qty: 1 });
+      saveAndRenderCart();
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(item => item.id !== id);
+      saveAndRenderCart();
+    }
+
+    function saveAndRenderCart() {
+      localStorage.setItem('nextshop_cart', JSON.stringify(cart));
+      const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+      const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      document.getElementById('cartCount').innerText = totalQty;
+      document.getElementById('cartTotal').innerText = `$${totalPrice.toFixed(2)}`;
+
+      const container = document.getElementById('cartItems');
+      if (cart.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 text-center py-8">Giỏ hàng đang trống / Your cart is empty.</p>`;
+        return;
+      }
+      container.innerHTML = cart.map(item => `
+        <div class="flex items-center justify-between border-b pb-3">
+          <div>
+            <h4 class="text-sm font-bold">${item.name}</h4>
+            <p class="text-xs text-slate-500">$${item.price.toFixed(2)} x ${item.qty}</p>
+          </div>
+          <button onclick="removeFromCart(${item.id})" class="text-xs text-red-500 hover:underline">Xóa</button>
+        </div>
+      `).join('');
+    }
+
+    function toggleCart() {
+      document.getElementById('cartDrawer').classList.toggle('hidden');
+    }
+
+    function toggleAIChat(forceOpen) {
+      const win = document.getElementById('aiChatWindow');
+      if (forceOpen === true) win.classList.remove('hidden');
+      else if (forceOpen === false) win.classList.add('hidden');
+      else win.classList.toggle('hidden');
+    }
+
+    function toggleModal(id) {
+      document.getElementById(id).classList.toggle('hidden');
+      if (id === 'apiKeyModal') {
+        document.getElementById('apiKeyInput').value = openAiKey;
+      }
+    }
+
+    function saveApiKey() {
+      openAiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('openai_api_key', openAiKey);
+      toggleModal('apiKeyModal');
+      alert('Đã lưu OpenAI API Key thành công!');
+    }
+
+    function checkout() {
+      if (cart.length === 0) return alert('Giỏ hàng của bạn đang trống!');
+      alert('🎉 Đặt hàng thành công! Cảm ơn bạn đã trải nghiệm NextShop AI.');
+      cart = [];
+      saveAndRenderCart();
+      toggleCart();
+    }
+
+    // OpenAI API Integration: Conversational Shopping Assistant
+    async function callOpenAI(systemPrompt, userPrompt) {
+      if (!openAiKey) {
+        // Fallback intelligent response when running without API key in demo mode
+        return "💡 [Chế độ Demo / Demo Mode]: Dựa trên danh mục cửa hàng, tôi gợi ý bạn tham khảo **Bình giữ nhiệt hiển thị LED EcoBottle ($29)** hoặc **Máy lọc không khí AirPure HEPA 13 ($149)**. (Hãy nhập OpenAI API Key ở nút ⚙️ API Key trên thanh menu để kích hoạt trực tiếp mô hình GPT-4o-mini).";
+      }
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openAiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      return data.choices[0].message.content;
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const msgBox = document.getElementById('chatMessages');
+      msgBox.innerHTML += `<div class="bg-indigo-600 text-white p-2.5 rounded-lg ml-8 text-right">${text}</div>`;
+      input.value = '';
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      const systemPrompt = `You are a helpful bilingual (Vietnamese/English) AI Shopping Assistant for NextShop AI. Recommend products strictly from this inventory JSON: ${JSON.stringify(PRODUCTS)}. Keep answers concise and friendly.`;
+
+      try {
+        const reply = await callOpenAI(systemPrompt, text);
+        msgBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 mr-6">${reply}</div>`;
+      } catch (err) {
+        msgBox.innerHTML += `<div class="bg-red-50 text-red-600 p-2.5 rounded-lg text-xs">Lỗi OpenAI API: ${err.message}</div>`;
+      }
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    async function generateProductCopy() {
+      const name = document.getElementById('copyProductName').value.trim();
+      const kw = document.getElementById('copyKeywords').value.trim();
+      const out = document.getElementById('copyResult');
+      if (!name) return alert('Vui lòng nhập tên sản phẩm!');
+
+      out.value = "⏳ Đang gọi OpenAI API (gpt-4o-mini)...";
+      const sys = "You are an expert E-Commerce SEO Copywriter. Write a persuasive bilingual Vietnamese-English product description.";
+      const usr = `Product Name: ${name}. Key Features: ${kw}`;
+
+      try {
+        out.value = await callOpenAI(sys, usr);
+      } catch (err) {
+        out.value = `Lỗi: ${err.message}`;
+      }
+    }
+
+    // Initialize Store
+    renderProducts();
+    saveAndRenderCart();
+  </script>
+</body>
+</html>
